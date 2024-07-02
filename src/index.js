@@ -2,8 +2,22 @@ import express from "express";
 import mongoose from "mongoose";
 import { DB_NAME } from "./constants.js";
 import connectDB from "./db/index.js";
+import { app } from "./app.js";
 
-connectDB();
+connectDB().then(
+    () => {
+        app.listen(process.env.PORT || "3001", () => {
+            console.log(`Server Is Running On ${process.env.PORT || "3001"}`);
+        })
+
+        app.on("error", (error) => {
+            console.log(error);
+            throw error;
+        })
+    }
+).catch((error) => {
+    console.log(error);
+})
 
 
 
