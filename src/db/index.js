@@ -6,7 +6,10 @@ configDotenv({ path: "./.env" });
 
 const connectDB = async () => {
     try {
-        const connectionInstance = await mongoose.connect(`${process.env.MONGO_DB_URI}/${DB_NAME}`)
+        const connectionInstance = await mongoose.connect(`${process.env.MONGO_DB_URI}/${DB_NAME}`, { 
+            serverSelectionTimeoutMS: 10000, // 10 seconds
+        })
+
         console.log(`\n MongoDB Connected !! DB Host: ${connectionInstance.connection.host}`);
 
         // console.log(connectionInstance);
