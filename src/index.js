@@ -1,23 +1,20 @@
-import express from "express";
-import mongoose from "mongoose";
-import { DB_NAME } from "./constants.js";
-import connectDB from "./db/index.js";
+import connectDB from "./db/connectDB.js";
 import { app } from "./app.js";
+import { configDotenv } from "dotenv"
 
-connectDB().then(
-    () => {
-        app.listen(process.env.PORT || "3001", () => {
-            console.log(`Server Is Running On ${process.env.PORT || "3001"}`);
-        })
+configDotenv({ path: "./.env" });
 
-        app.on("error", (error) => {
-            console.log(error);
-            throw error;
-        })
-    }
-).catch((error) => {
-    console.log(error);
+
+app.listen(process.env.PORT || "3001", () => {
+    console.log(`Server Is Running On ${process.env.PORT || "3001"}`);
 })
+
+app.on("error", (error) => {
+    console.log(error);
+    throw error;
+})
+
+
 
 
 
