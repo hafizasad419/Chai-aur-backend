@@ -1,5 +1,6 @@
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { apiError } from "../utils/ApiError.js";
+import fs from "fs";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { apiResponse } from "../utils/apiResponse.js";
@@ -18,7 +19,7 @@ otherwise return error
 
 */
 const registerUser = asyncHandler(async (req, res) => {
-    const { username, email, pass } = req.body;
+    const { username, email, pass, fullName } = req.body;
     console.log(username, email, pass);
 
     if (!username || !email || !pass) {
@@ -33,35 +34,40 @@ const registerUser = asyncHandler(async (req, res) => {
     let avatarUrl = null;
     if (req.files && req.files.avatar) {
         try {
-            const avatarPath = req.files.avatar[0].path;
-            const result = await cloudinary.uploader.upload(avatarPath);
-            avatarUrl = result.secure_url;
-            fs.unlink(avatarPath, (err) => {
-                if (err) console.error(`Failed to delete local file: ${err.message}`);
-            }); // Remove the local file after uploading to Cloudinary
+            const avatarPath = req.files?.avatar[0].path;
+            console.log("Avatar path:", avatarPath);
+            const result = await uploadOnCloudinary(avatarPath);
+            if (result) {
+                avatarUrl = result.secure_url;
+                console.log("Uploaded avatar URL:", avatarUrl);
+            } else {
+                return res.status(500).json({ error: "Failed to upload avatar." });
+            }
         } catch (error) {
+            console.error("Error in Cloudinary upload:", error);
             return res.status(500).json({ error: "Failed to upload avatar." });
         }
     }
 
-    const newUser = new User({
+    const user = await User.create({
         username,
         email,
-        pass,
+        fullName,
         avatar: avatarUrl,
-    });
+        pass,
+    })
 
-    try {
-        const savedUser = await newUser.save();
+    const createdUser = await User.findById(user._id).select(
+        "-pass -refreshToken"
+    )
 
-        const responseUser = { ...savedUser._doc };
-        delete responseUser.pass;
-        delete responseUser.refreshToken;
-
-        return res.status(201).json({ user: responseUser });
-    } catch (error) {
-        return res.status(500).json({ error: "Failed to create user." });
+    if (!createdUser) {
+        throw new apiError(500, "Something went wrong while registering the user")
     }
-});
 
+    return res.status(201).json(
+        new apiResponse(200, createdUser, "User registered Successfully")
+    )
+
+})
 export { registerUser };
