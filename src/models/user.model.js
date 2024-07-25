@@ -40,7 +40,7 @@ const userSchema = new Schema({
 
     pass: {
         type: String,
-        required: [true, "Password is required."],
+        required: [true, "pass is required."],
 
     },
     refreshToken: {
@@ -56,8 +56,8 @@ const userSchema = new Schema({
 
 async function preSaveHandler(next) {
 
-    if (this.isModified("password")) {
-        this.password = await bcrypt.hash(this.password, 10)
+    if (this.isModified("pass")) {
+        this.pass = await bcrypt.hash(this.pass, 10)
     }
 
     next()
@@ -66,9 +66,9 @@ async function preSaveHandler(next) {
 
 userSchema.pre("save", preSaveHandler)
 
-userSchema.methods.isPasswordCorrect = async function (password) {
+userSchema.methods.isPassCorrect = async function (pass) {
 
-    return await bcrypt.compare(password, this.password)
+    return await bcrypt.compare(pass, this.pass)
 
 }
 
@@ -93,7 +93,7 @@ userSchema.methods.generateRefreshToken = function () {
         _id: this._id,
 
     },
-        process.env.REFRESH_TOKEN,
+        process.env.REFRESH_TOKEN_SECRET,
         {
             expiresIn: process.env.REFRESH_TOKEN_EXPIRY
         }
