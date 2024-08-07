@@ -277,7 +277,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
         .json(new apiResponse(200, user, "Account details updated successfully"))
 })
 
-
+// TODO: Delete old avatar from cloudinary after new avatar has been uploaded
 const updateUserAvatar = asyncHandler(async (req, res) => {
     const avatarLocalPath = req.file?.path
 
@@ -290,6 +290,8 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     if (!avatar.url) {
         throw new apiError(400, "Error while uploading avatar on cloudinary.")
     }
+
+
 
     const user = User.findOneAndUpdate(
         req.user?._id,
@@ -338,6 +340,85 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
         .json(new apiResponse(200, user, "cover image Successfully updated."))
 })
 
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+    const username = req.params
+
+    if (!username?.trim()) {
+        throw new apiError(401, "username is missing.")
+    }
+
+    const channel = User.aggregate([
+        {
+            $match: {
+                username: username?.toLowerCase()
+            }
+        },
+
+        {
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "channel",
+                as: "subscribers"
+            }
+        },
+
+        {
+            $lookup: {
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "subscriber",
+                as: "subscribedTo"
+            }
+        },
+
+        {
+            $addFields: {
+                subscribersCount: {
+                    $size: "$subscribers"
+                },
+                subscriberedToCount: {
+                    $size: "$subscribedTo"
+                },
+
+                isSubscribed: {
+                    $cond: {
+                        if: {
+                            $in: [req.user?._id, "$subscribers.subscriber"]
+                        },
+                        then: true,
+                        else: false
+                    }
+                }
+            }
+        },
+
+        {
+            $project: {
+                fullName: 1,
+                username: 1,
+                email: 1,
+                avatar: 1,
+                coverImage: 1,
+                subscribersCount: 1,
+                subscriberedToCount: 1,
+                isSubscribed: 1,
+
+            }
+        },
+    ])
+
+    if (channel?.length) {
+        throw new apiError("oops, channel not found.")
+    }
+
+    return res
+        .status(200)
+        .json(new apiResponse(200, channel[0], "User channel fetched successfully."))
+})
+
+
+
 export {
     registerUser,
     loginUser,
@@ -346,5 +427,7 @@ export {
     changeUserPassword,
     getCurrentUser,
     updateAccountDetails,
-    updateUserAvatar
+    updateUserAvatar,
+    updateUserCoverImage,
+    getUserChannelProfile
 };
