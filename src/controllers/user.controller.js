@@ -157,8 +157,8 @@ const logoutUser = asyncHandler(async (req, res) => {
     await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: {
-                refreshToken: undefined,
+            $unset: {
+                refreshToken: 1, //it removes a specific field from document.
             }
         },
         {
@@ -226,6 +226,8 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
 
 const changeUserPassword = asyncHandler(async (req, res) => {
     const { oldPass, newPass } = req.body
+    // console.log(oldPass, newPass);
+
 
     const user = await User.findById(req.user?._id)
 
@@ -294,8 +296,9 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
 
 
 
-    const user = User.findOneAndUpdate(
+    const user = await User.findOneAndUpdate(
         req.user?._id,
+
         {
             $set: {
                 avatar: avatar.url
@@ -305,6 +308,7 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
             new: true,
         }
     ).select("-pass")
+    console.log(req.user?._id);
 
     return res
         .status(200)
@@ -324,7 +328,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
         throw new apiError(400, "Error while uploading cover image on cloudinary.")
     }
 
-    const user = User.findOneAndUpdate(
+    const user = await User.findOneAndUpdate(
         req.user?._id,
         {
             $set: {
@@ -342,16 +346,18 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 })
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
-    const username = req.params
+    const { username } = req.params
+    console.log(username);
 
-    if (!username?.trim()) {
+
+    if (!username) {
         throw new apiError(401, "username is missing.")
     }
 
-    const channel = User.aggregate([
+    const channel = await User.aggregate([
         {
             $match: {
-                username: username?.toLowerCase()
+                username: username
             }
         },
 
@@ -408,19 +414,20 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
             }
         },
     ])
+    console.log(channel);
 
     if (!channel?.length) {
-        throw new apiError("oops, channel not found.")
+        throw new apiError(401, "oops, channel not found.")
     }
 
     return res
         .status(200)
         .json(new apiResponse(200, channel[0], "User channel fetched successfully."))
-})
-
+}
+)
 
 const getWatchHistory = asyncHandler(async (req, res) => {
-    const user = await User.aggregate(
+    const user = await User.aggregate([
         {
             $match: {
                 _id: new mongoose.Types.ObjectId(req.user._id)
@@ -430,7 +437,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
         {
             $lookup: {
                 from: "videos",
-                localField: "watchHisory",
+                localField: "watchHistory",
                 foreignField: "_id",
                 as: "watchHistory",
                 pipeline: [
@@ -461,6 +468,8 @@ const getWatchHistory = asyncHandler(async (req, res) => {
                 ]
             }
         },
+
+    ]
 
 
 
